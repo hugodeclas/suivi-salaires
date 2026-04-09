@@ -228,7 +228,10 @@ tr:hover td{background:var(--row-hover);}
       <label>Sélectionnez jusqu'à 5 années à comparer</label>
       <div class="yr-pills" id="yr-pills"></div>
     </div>
-    <div><label>Employeur (optionnel)</label><select id="cmp-emp" onchange="renderCmp()" style="max-width:300px"><option value="">Tous</option></select></div>
+    <div class="g2" style="margin-top:14px">
+      <div><label>Employeur (optionnel)</label><select id="cmp-emp" onchange="renderCmp()" style="max-width:300px"><option value="">Tous</option></select></div>
+      <div><label>Année de référence (pour les écarts)</label><select id="cmp-ref" onchange="renderCmp()"><option value="prev">Année précédente dans la sélection</option></select></div>
+    </div>
   </div>
   <div id="kcmp" class="kgrid"></div>
   <div class="cc"><div class="cct">📅 Comparaison mensuelle — salaires nets</div><div class="cht"><canvas id="c-cmp-m"></canvas></div></div>
@@ -499,6 +502,11 @@ function popCmp(){
   }).join('');
 
   document.getElementById('cmp-emp').innerHTML='<option value="">Tous</option>'+emps.map(e=>`<option>${e}</option>`).join('');
+  // Remplir le sélecteur de référence
+  const refSel=document.getElementById('cmp-ref');
+  const curRef=refSel.value;
+  refSel.innerHTML='<option value="prev">Année précédente dans la sélection</option>'+years.map(y=>`<option value="${y}">${y} (référence fixe)</option>`).join('');
+  if(curRef&&[...refSel.options].some(o=>o.value===curRef))refSel.value=curRef;
 }
 
 function toggleYear(y){
@@ -526,16 +534,21 @@ function renderCmp(){
   const sPAS=a=>a.reduce((x,b)=>x+(b.pas||0),0);
 
   // KPIs
+  const refMode=document.getElementById('cmp-ref')?.value||'prev';
+  const refFixed=refMode!=='prev'?datasets.find(d=>d.y===refMode):null;
   document.getElementById('kcmp').innerHTML=datasets.map(({y,data},i)=>{
     const col=CL[annees.indexOf(y)%CL.length];
-    const ref=i>0?sN(datasets[0].data):null;
-    const diff=ref!==null?sN(data)-ref:null;
-    const pct=ref?((diff/ref)*100).toFixed(1):null;
-    return `<div class="kpi" style="--kc:${col}">
-      <div class="kl" style="color:${col}">${y}</div>
+    // Année de référence : soit fixe, soit la précédente dans la sélection
+    const refData=refFixed?refFixed.data:(i>0?datasets[i-1].data:null);
+    const refY=refFixed?refFixed.y:(i>0?datasets[i-1].y:null);
+    const isRef=refFixed&&refFixed.y===y;
+    const diff=(!isRef&&refData!==null)?sN(data)-sN(refData):null;
+    const pct=diff!==null&&sN(refData)>0?((diff/sN(refData))*100).toFixed(1):null;
+    return `<div class="kpi" style="--kc:${col}${isRef?';border:1px solid '+col:''}">
+      <div class="kl" style="color:${col}">${y}${isRef?' ⭐ référence':''}</div>
       <div class="kv">${E(sN(data))}</div>
       <div class="ks">${data.length} mois · moy. ${E(mN(data))}</div>
-      ${diff!==null?`<div class="kd ${diff>=0?'up':'down'}">${diff>=0?'+':''}${E(diff)} (${diff>=0?'▲':'▼'}${Math.abs(pct)}%)</div>`:''}
+      ${diff!==null&&pct!==null?`<div class="kd ${diff>=0?'up':'down'}">${diff>=0?'+':''}${E(diff)} vs ${refY} (${diff>=0?'▲':'▼'}${Math.abs(pct)}%)</div>`:''}
     </div>`;
   }).join('');
 
