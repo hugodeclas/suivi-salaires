@@ -254,8 +254,10 @@ tr:hover td{background:var(--row-hover);}
     <div class="ct" style="margin:0">🏢 Employeurs</div>
     <div style="display:flex;gap:8px;align-items:center">
       <div style="display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden">
-        <button id="sort-alpha" onclick="setEmpSort('alpha')" style="padding:8px 14px;background:var(--accent);color:#12100a;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">A→Z</button>
-        <button id="sort-chrono" onclick="setEmpSort('chrono')" style="padding:8px 14px;background:transparent;color:var(--muted);border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Chronologique</button>
+        <button id="sort-alpha" onclick="setEmpSort('alpha')" style="padding:8px 12px;background:var(--accent);color:#12100a;border:none;border-right:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">A→Z</button>
+        <button id="sort-zalpha" onclick="setEmpSort('zalpha')" style="padding:8px 12px;background:transparent;color:var(--muted);border:none;border-right:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Z→A</button>
+        <button id="sort-chrono" onclick="setEmpSort('chrono')" style="padding:8px 12px;background:transparent;color:var(--muted);border:none;border-right:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">↑ Chrono</button>
+        <button id="sort-antichrono" onclick="setEmpSort('antichrono')" style="padding:8px 12px;background:transparent;color:var(--muted);border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">↓ Récent</button>
       </div>
       <button class="btn bp" onclick="openNewEmp()">+ Ajouter</button>
     </div>
@@ -661,10 +663,13 @@ function renderCmp(){
 // ══ EMPLOYEURS ══
 function setEmpSort(mode){
   empSort=mode;
-  document.getElementById('sort-alpha').style.background=mode==='alpha'?'var(--accent)':'transparent';
-  document.getElementById('sort-alpha').style.color=mode==='alpha'?'#12100a':'var(--muted)';
-  document.getElementById('sort-chrono').style.background=mode==='chrono'?'var(--accent)':'transparent';
-  document.getElementById('sort-chrono').style.color=mode==='chrono'?'#12100a':'var(--muted)';
+  const btns={alpha:'sort-alpha',zalpha:'sort-zalpha',chrono:'sort-chrono',antichrono:'sort-antichrono'};
+  Object.entries(btns).forEach(([m,id])=>{
+    const btn=document.getElementById(id);
+    if(!btn)return;
+    btn.style.background=m===mode?'var(--accent)':'transparent';
+    btn.style.color=m===mode?'#12100a':'var(--muted)';
+  });
   renderEmps();
 }
 function renderEmps(){
@@ -674,12 +679,19 @@ function renderEmps(){
   let empsSorted=[...emps];
   if(empSort==='alpha'){
     empsSorted.sort((a,b)=>a.localeCompare(b,'fr'));
-  } else {
-    // Chronologique : par date du premier bulletin
+  } else if(empSort==='zalpha'){
+    empsSorted.sort((a,b)=>b.localeCompare(a,'fr'));
+  } else if(empSort==='chrono'){
     empsSorted.sort((a,b)=>{
       const da=srt(sal.filter(s=>s.employeur===a))[0]?.mois||'9999';
       const db=srt(sal.filter(s=>s.employeur===b))[0]?.mois||'9999';
       return da<db?-1:1;
+    });
+  } else { // antichrono
+    empsSorted.sort((a,b)=>{
+      const da=srt(sal.filter(s=>s.employeur===a))[0]?.mois||'0000';
+      const db=srt(sal.filter(s=>s.employeur===b))[0]?.mois||'0000';
+      return da>db?-1:1;
     });
   }
   el.innerHTML=empsSorted.map((emp)=>{
