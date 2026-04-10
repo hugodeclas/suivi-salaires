@@ -214,7 +214,7 @@ tr:hover td{background:var(--row-hover);}
     <div class="cc"><div class="cct">📈 Évolution nette — 12 derniers mois</div><div class="ch"><canvas id="c-evo"></canvas></div></div>
     <div class="cc"><div class="cct">🥧 Répartition dernier mois</div><div class="ch"><canvas id="c-rep"></canvas></div></div>
   </div>
-  <div class="cc"><div class="cct">📊 Net mensuel — toutes années</div><div class="cht"><canvas id="c-bar"></canvas></div></div>
+  <div class="cc"><div class="cct">📊 Net mensuel — toutes années</div><div id="bar-legend" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px"></div><div class="cht"><canvas id="c-bar"></canvas></div></div>
   <div class="g2">
     <div class="cc"><div class="cct">💎 Net vs Brut — 12 mois</div><div class="ch"><canvas id="c-nb"></canvas></div></div>
     <div class="cc"><div class="cct">🧾 PAS mensuel</div><div class="ch"><canvas id="c-pas"></canvas></div></div>
@@ -252,7 +252,13 @@ tr:hover td{background:var(--row-hover);}
 <div id="tab-employeurs" style="display:none">
   <div class="sh">
     <div class="ct" style="margin:0">🏢 Employeurs</div>
-    <button class="btn bp" onclick="openNewEmp()">+ Ajouter</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        <button id="sort-alpha" onclick="setEmpSort('alpha')" style="padding:8px 14px;background:var(--accent);color:#12100a;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">A→Z</button>
+        <button id="sort-chrono" onclick="setEmpSort('chrono')" style="padding:8px 14px;background:transparent;color:var(--muted);border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Chronologique</button>
+      </div>
+      <button class="btn bp" onclick="openNewEmp()">+ Ajouter</button>
+    </div>
   </div>
   <div id="emplist"></div>
 </div>
@@ -327,6 +333,7 @@ let emps=JSON.parse(localStorage.getItem('sal_e')||'["Nexpublica"]');
 let cfg=JSON.parse(localStorage.getItem('sal_c')||'{}');
 let charts={},tab='saisie',editId=null,mnual=false,aiD=null;
 let selYears=[]; // années sélectionnées pour le comparatif
+let empSort='alpha'; // 'alpha' ou 'chrono'
 
 const MN=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const CL=['#c8a96e','#5b8dee','#5ec994','#e06c8a','#b07cc6','#f0a04b','#4ecdc4','#ff6b6b'];
@@ -480,7 +487,74 @@ function renderDB(){
   mk('c-evo',{type:'line',data:{labels:l12.map(s=>FM(s.mois)),datasets:[{label:'Net',data:l12.map(s=>s.net),borderColor:'#5ec994',backgroundColor:'rgba(94,201,148,.12)',fill:true,tension:.4,pointRadius:4},{label:'Brut',data:l12.map(s=>s.brut),borderColor:'#c8a96e',fill:false,tension:.4,borderDash:[4,4],pointRadius:3}]},options:bo});
   const lx=data[data.length-1];
   mk('c-rep',{type:'doughnut',data:{labels:['Net (hors primes)','PAS','Primes','Cotisations'],datasets:[{data:[Math.max(0,lx.net-lx.primes),lx.pas||0,lx.primes,lx.cotisations],backgroundColor:['#5ec994','#e06c8a','#c8a96e','#b07cc6'],borderColor:dark()?'#1c2030':'#fff',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:dark()?'#7b8198':'#9499b3',font:{family:'DM Sans',size:12},padding:14}}}}});
-  mk('c-bar',{type:'bar',data:{labels:al,datasets:[{label:'Net',data:data.map(s=>s.net),backgroundColor:data.map(s=>CL[Math.max(0,emps.indexOf(s.employeur))%CL.length]+'cc'),borderRadius:6,borderSkipped:false}]},options:{...bo,plugins:{...bo.plugins,legend:{display:false}}}});
+  // Graphique net mensuel toutes années : barres colorées par employeur + ligne tendance + légende
+  const empColors=emps.map((e,i)=>CL[i%CL.length]);
+  // Légende employeurs
+  const legendHTML=emps.filter(e=>sal.some(s=>s.employeur===e)).map((e,i)=>{
+    const col=CL[emps.indexOf(e)%CL.length];
+    return `<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)"><span style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;display:inline-block"></span>${e}</div>`;
+  }).join('');
+  document.getElementById('bar-legend').innerHTML=legendHTML;
+  // Ligne de tendance (moyenne mobile simple)
+  const trendData=data.map((s,i)=>{
+    const win=data.slice(Math.max(0,i-2),i+3);
+    return win.reduce((a,b)=>a+b.net,0)/win.length;
+  });
+  mk('c-bar',{
+    type:'bar',
+    data:{
+      labels:al,
+      datasets:[
+        {
+          type:'bar',
+          label:'Net mensuel',
+          data:data.map(s=>s.net),
+          backgroundColor:data.map(s=>CL[Math.max(0,emps.indexOf(s.employeur))%CL.length]+'cc'),
+          borderRadius:6,
+          borderSkipped:false,
+          order:2
+        },
+        {
+          type:'line',
+          label:'Tendance',
+          data:trendData,
+          borderColor:'#ffffff88',
+          backgroundColor:'transparent',
+          borderWidth:2,
+          borderDash:[4,4],
+          pointRadius:0,
+          tension:.4,
+          order:1
+        }
+      ]
+    },
+    options:{
+      ...bo,
+      plugins:{
+        ...bo.plugins,
+        legend:{
+          display:true,
+          labels:{
+            color:dark()?'#7b8198':'#9499b3',
+            font:{family:'DM Sans',size:12},
+            filter:(item)=>item.datasetIndex===1, // montrer seulement "Tendance"
+            boxWidth:20
+          }
+        },
+        tooltip:{
+          callbacks:{
+            label:(ctx)=>{
+              if(ctx.datasetIndex===0){
+                const s=data[ctx.dataIndex];
+                return [`Net : ${E(ctx.raw)}`,`Employeur : ${s.employeur}`];
+              }
+              return `Tendance : ${E(Math.round(ctx.raw))}`;
+            }
+          }
+        }
+      }
+    }
+  });
   mk('c-nb',{type:'bar',data:{labels:l12.map(s=>FM(s.mois)),datasets:[{label:'Brut',data:l12.map(s=>s.brut),backgroundColor:'rgba(200,169,110,.6)',borderRadius:4},{label:'Net',data:l12.map(s=>s.net),backgroundColor:'rgba(94,201,148,.7)',borderRadius:4}]},options:bo});
   mk('c-pas',{type:'bar',data:{labels:al,datasets:[{label:'PAS',data:data.map(s=>s.pas||0),backgroundColor:'rgba(224,108,138,.7)',borderRadius:6}]},options:{...bo,plugins:{...bo.plugins,legend:{display:false}}}});
 }
@@ -585,17 +659,43 @@ function renderCmp(){
 }
 
 // ══ EMPLOYEURS ══
+function setEmpSort(mode){
+  empSort=mode;
+  document.getElementById('sort-alpha').style.background=mode==='alpha'?'var(--accent)':'transparent';
+  document.getElementById('sort-alpha').style.color=mode==='alpha'?'#12100a':'var(--muted)';
+  document.getElementById('sort-chrono').style.background=mode==='chrono'?'var(--accent)':'transparent';
+  document.getElementById('sort-chrono').style.color=mode==='chrono'?'#12100a':'var(--muted)';
+  renderEmps();
+}
 function renderEmps(){
   const el=document.getElementById('emplist');
   if(!emps.length){el.innerHTML='<div class="empty"><div class="emoji">🏢</div><p>Aucun employeur</p></div>';return;}
-  el.innerHTML=emps.map((emp,i)=>{
+  // Trier selon le mode
+  let empsSorted=[...emps];
+  if(empSort==='alpha'){
+    empsSorted.sort((a,b)=>a.localeCompare(b,'fr'));
+  } else {
+    // Chronologique : par date du premier bulletin
+    empsSorted.sort((a,b)=>{
+      const da=srt(sal.filter(s=>s.employeur===a))[0]?.mois||'9999';
+      const db=srt(sal.filter(s=>s.employeur===b))[0]?.mois||'9999';
+      return da<db?-1:1;
+    });
+  }
+  el.innerHTML=empsSorted.map((emp)=>{
+    const i=emps.indexOf(emp); // couleur basée sur l'index original
     const data=sal.filter(s=>s.employeur===emp),s=srt(data);
     const tN=data.reduce((a,b)=>a+b.net,0),tB=data.reduce((a,b)=>a+b.brut,0),mN=data.length?tN/data.length:0,tP=data.reduce((a,b)=>a+(b.pas||0),0);
     const col=CL[i%CL.length];
     return `<div class="card" style="border-left:3px solid ${col};margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
-        <div><div style="font-family:'DM Serif Display',serif;font-size:18px">${emp}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">${s[0]?FM(s[0].mois):'—'}${s.length>1?' → '+FM(s[s.length-1].mois):''} · ${data.length} fiche(s)</div></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0"></div>
+            <div style="font-family:'DM Serif Display',serif;font-size:18px">${emp}</div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;margin-left:20px">${s[0]?FM(s[0].mois):'—'}${s.length>1?' → '+FM(s[s.length-1].mois):''} · ${data.length} fiche(s)</div>
+        </div>
         <button class="btn bd" onclick="delEmp('${emp}')">🗑 Supprimer</button>
       </div>
       <div class="g5">
