@@ -21,17 +21,28 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .25s,color .25s;}
 
-header{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;box-shadow:0 2px 12px var(--shadow);}
-.logo{font-family:'DM Serif Display',serif;font-size:22px;color:var(--accent);}
-.logo span{color:var(--muted);font-size:12px;display:block;font-family:'DM Sans',sans-serif;font-weight:300;}
-.hact{display:flex;gap:8px;align-items:center;}
-.bico{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:10px;width:38px;height:38px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;box-shadow:0 2px 12px var(--shadow);}
+.logo{font-family:'DM Serif Display',serif;font-size:20px;color:var(--accent);}
+.logo span{color:var(--muted);font-size:11px;display:block;font-family:'DM Sans',sans-serif;font-weight:300;}
+.hact{display:flex;gap:6px;align-items:center;}
+.bico{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:10px;width:38px;height:38px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .bico:hover{border-color:var(--accent);color:var(--accent);}
+.at-pill{font-size:11px;color:var(--muted);display:flex;align-items:center;white-space:nowrap;}
 
-nav{display:flex;padding:0 32px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
-.nb{background:none;border:none;color:var(--muted);padding:14px 20px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;font-family:'DM Sans',sans-serif;}
+nav{display:flex;padding:0;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+nav::-webkit-scrollbar{display:none;}
+.nb{background:none;border:none;color:var(--muted);padding:12px 16px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;font-family:'DM Sans',sans-serif;}
 .nb.active{color:var(--accent);border-bottom-color:var(--accent);}
 .nb:hover:not(.active){color:var(--text);}
+
+@media(max-width:480px){
+  header{padding:10px 14px;}
+  .logo{font-size:18px;}
+  .logo span{display:none;}
+  .at-pill{display:none;}
+  .bico{width:36px;height:36px;font-size:15px;}
+  .hact{gap:4px;}
+}
 
 main{max-width:1200px;margin:0 auto;padding:32px;}
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;}
@@ -132,11 +143,9 @@ tr:hover td{background:var(--row-hover);}
 .yr-pill:hover:not(.selected){border-color:var(--muted);color:var(--text);}
 
 @media(max-width:700px){
-  main{padding:16px;}
+  main{padding:12px;}
   .g2,.g3,.g4,.g5{grid-template-columns:1fr;}
   .kgrid{grid-template-columns:1fr 1fr;}
-  header{padding:14px 16px;}
-  nav{padding:0 8px;}
 }
 </style>
 </head>
@@ -144,7 +153,7 @@ tr:hover td{background:var(--row-hover);}
 <header>
   <div class="logo">Salaires <span>Suivi de rémunération</span></div>
   <div class="hact">
-    <span style="font-size:12px;color:var(--muted);display:flex;align-items:center"><span id="atdot"></span><span id="attxt">—</span></span>
+    <span class="at-pill"><span id="atdot"></span><span id="attxt">—</span></span>
     <button class="bico" onclick="syncAT()" title="Synchroniser">🔄</button>
     <button class="bico" id="tbtn" onclick="toggleTheme()" title="Mode jour/nuit">☀️</button>
     <button class="bico" onclick="openCfg()" title="Configuration">⚙️</button>
